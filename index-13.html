@@ -1,0 +1,2361 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام إدارة محطة الوقود</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #C0392B;
+    --red-dark: #922B21;
+    --red-light: #E74C3C;
+    --gold: #D4AC0D;
+    --gold-light: #F4D03F;
+    --gold-dark: #9A7D0A;
+    --white: #FFFFFF;
+    --off-white: #FDF9F0;
+    --cream: #FAF0DC;
+    --gray-100: #F5F5F5;
+    --gray-200: #E8E8E8;
+    --gray-300: #CCCCCC;
+    --gray-500: #888888;
+    --gray-700: #444444;
+    --gray-900: #1A1A1A;
+    --text-primary: #1A1A1A;
+    --text-secondary: #555555;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.16);
+    --border-radius: 10px;
+    --border-radius-lg: 16px;
+    --font-main: 'Cairo', 'Tajawal', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-main);
+    background: var(--off-white);
+    color: var(--text-primary);
+    min-height: 100vh;
+    font-size: 14px;
+    direction: rtl;
+  }
+
+  /* ===== LAYOUT ===== */
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(135deg, var(--red-dark) 0%, var(--red) 60%, var(--red-light) 100%);
+    color: white;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    box-shadow: 0 2px 12px rgba(192,57,43,0.4);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-title {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .header-title span.gold { color: var(--gold-light); }
+  .header-right { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .badge-user {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 12px;
+  }
+
+  .nav-bar {
+    background: var(--white);
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    overflow-x: auto;
+    padding: 0 8px;
+    scrollbar-width: none;
+    gap: 2px;
+    position: sticky;
+    top: 56px;
+    z-index: 99;
+    box-shadow: var(--shadow-sm);
+  }
+  .nav-bar::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    padding: 10px 14px;
+    font-family: var(--font-main);
+    font-size: 12.5px;
+    font-weight: 600;
+    background: none;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--gray-500);
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .nav-btn:hover { color: var(--red); }
+  .nav-btn.active { color: var(--red); border-bottom-color: var(--red); background: rgba(192,57,43,0.04); }
+
+  .page { display: none; padding: 14px; max-width: 1200px; margin: 0 auto; width: 100%; }
+  .page.active { display: block; }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-200);
+    margin-bottom: 12px;
+  }
+  .card-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(90deg, rgba(192,57,43,0.05), transparent);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--red-dark);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card-body { padding: 12px 14px; }
+
+  /* ===== GRID STATS ===== */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat-box {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 12px;
+    text-align: center;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+  }
+  .stat-box.diesel { border-top: 3px solid #2C3E50; }
+  .stat-box.n91 { border-top: 3px solid #27AE60; }
+  .stat-box.n95 { border-top: 3px solid var(--red); }
+  .stat-label { font-size: 11px; color: var(--gray-500); font-weight: 600; margin-bottom: 4px; }
+  .stat-value { font-size: 18px; font-weight: 800; color: var(--text-primary); }
+  .stat-sub { font-size: 11px; color: var(--gold-dark); font-weight: 600; margin-top: 2px; }
+
+  /* ===== FUEL TYPE COLORS ===== */
+  .diesel-color { color: #2C3E50; }
+  .n91-color { color: #27AE60; }
+  .n95-color { color: var(--red); }
+  .diesel-bg { background: #2C3E50; }
+  .n91-bg { background: #27AE60; }
+  .n95-bg { background: var(--red); }
+
+  /* ===== FORMS ===== */
+  .form-group { margin-bottom: 10px; }
+  .form-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--gray-700); margin-bottom: 4px; }
+  .form-input, .form-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    font-family: var(--font-main);
+    font-size: 13px;
+    color: var(--text-primary);
+    background: white;
+    transition: border-color 0.2s;
+    direction: rtl;
+  }
+  .form-input:focus, .form-select:focus {
+    outline: none;
+    border-color: var(--red);
+    box-shadow: 0 0 0 2px rgba(192,57,43,0.1);
+  }
+  .form-input[readonly] { background: var(--gray-100); }
+  .consumption-display {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--red);
+    margin-top: 3px;
+    min-height: 18px;
+  }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--red), var(--red-dark));
+    color: white;
+    box-shadow: 0 2px 8px rgba(192,57,43,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(192,57,43,0.4); }
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    color: white;
+    box-shadow: 0 2px 8px rgba(212,172,13,0.3);
+  }
+  .btn-ghost { background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-300); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-full { width: 100%; justify-content: center; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ===== TABLE STYLE ===== */
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th {
+    background: linear-gradient(135deg, var(--red-dark), var(--red));
+    color: white;
+    padding: 9px 10px;
+    text-align: center;
+    font-weight: 700;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--gray-200);
+    text-align: center;
+    font-size: 12.5px;
+  }
+  tr:nth-child(even) td { background: #FAFAFA; }
+  tr:hover td { background: rgba(192,57,43,0.03); }
+
+  /* ===== DIVIDER ===== */
+  .section-divider {
+    border: none;
+    border-left: 3px solid var(--gold);
+    margin: 12px 0;
+  }
+
+  /* ===== ALERT ===== */
+  .alert {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .alert-warning { background: #FFF8E1; border: 1px solid #FFD54F; color: #795548; }
+  .alert-danger { background: #FFEBEE; border: 1px solid var(--red-light); color: var(--red-dark); }
+  .alert-success { background: #E8F5E9; border: 1px solid #66BB6A; color: #2E7D32; }
+  .alert-info { background: #E3F2FD; border: 1px solid #42A5F5; color: #1565C0; }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white;
+    border-radius: var(--border-radius-lg);
+    width: 100%; max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+  }
+  .modal-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, var(--red-dark), var(--red));
+    color: white;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+  }
+  .modal-title { font-size: 15px; font-weight: 700; }
+  .modal-close { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+  .modal-body { padding: 16px; }
+
+  /* ===== INVENTORY TABLE ===== */
+  .inv-table-wrap { overflow-x: auto; }
+  .inv-table { min-width: 900px; }
+  .inv-table th { padding: 8px 10px; font-size: 11.5px; }
+  .inv-table td { padding: 7px 10px; font-size: 12px; }
+  .inv-section-header {
+    background: rgba(212,172,13,0.15);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--gold-dark);
+    text-align: center;
+    border-bottom: 2px solid var(--gold);
+  }
+  .col-divider { border-left: 2px solid var(--gold) !important; }
+
+  /* ===== PROGRESS BAR ===== */
+  .progress-bar-wrap { background: var(--gray-200); border-radius: 20px; height: 8px; margin-top: 4px; }
+  .progress-bar { height: 8px; border-radius: 20px; transition: width 0.5s; }
+
+  /* ===== SETUP WIZARD ===== */
+  .setup-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, var(--red-dark) 0%, #922B21 40%, #C0392B 100%);
+    z-index: 2000;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .setup-overlay.open { display: flex; }
+  .setup-card {
+    background: white;
+    border-radius: var(--border-radius-lg);
+    width: 100%; max-width: 520px;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .setup-header {
+    background: linear-gradient(135deg, var(--red-dark), var(--red));
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+  }
+  .setup-header h2 { font-size: 20px; font-weight: 800; }
+  .setup-header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .setup-logo {
+    width: 60px; height: 60px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 10px;
+    font-size: 28px;
+  }
+  .setup-body { padding: 20px; }
+  .setup-step { display: none; }
+  .setup-step.active { display: block; }
+  .step-indicator {
+    display: flex; gap: 6px; justify-content: center; margin-bottom: 16px;
+  }
+  .step-dot {
+    width: 28px; height: 6px; border-radius: 3px;
+    background: var(--gray-200);
+    transition: background 0.3s;
+  }
+  .step-dot.active { background: var(--red); }
+  .pump-config-item {
+    background: var(--gray-100);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+    display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end;
+  }
+
+  /* ===== BADGE ===== */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge-diesel { background: #2C3E50; color: white; }
+  .badge-91 { background: #27AE60; color: white; }
+  .badge-95 { background: var(--red); color: white; }
+
+  /* ===== LOGIN ===== */
+  .login-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, var(--red-dark), #922B21);
+    z-index: 3000;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .login-overlay.open { display: flex; }
+  .login-card {
+    background: white;
+    border-radius: var(--border-radius-lg);
+    width: 100%; max-width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+  .login-header {
+    background: linear-gradient(135deg, var(--red-dark), var(--red));
+    color: white;
+    padding: 28px 20px;
+    text-align: center;
+  }
+  .login-logo {
+    width: 70px; height: 70px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 32px;
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+  .login-header h2 { font-size: 20px; font-weight: 800; }
+  .login-header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+  .login-body { padding: 24px; }
+  .gold-line {
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 0 auto 16px;
+    width: 60%;
+  }
+
+  /* ===== SHIFT ROWS ===== */
+  .shift-row {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+    margin-bottom: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+  }
+  .shift-row:hover { box-shadow: var(--shadow-md); }
+  .shift-row-header {
+    padding: 10px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(90deg, rgba(192,57,43,0.05), transparent);
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .shift-row-body { padding: 10px 12px; display: none; }
+  .shift-row.expanded .shift-row-body { display: block; }
+
+  /* ===== TOTALS ROW ===== */
+  .totals-section {
+    background: linear-gradient(135deg, var(--red-dark), var(--red));
+    color: white;
+    border-radius: var(--border-radius);
+    padding: 12px;
+    margin: 10px 0;
+  }
+  .totals-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .total-item { text-align: center; }
+  .total-label { font-size: 11px; opacity: 0.8; }
+  .total-value { font-size: 16px; font-weight: 800; }
+
+  /* ===== PAYMENT SPLIT ===== */
+  .payment-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .payment-item {
+    background: var(--gray-100);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    border: 1px solid var(--gray-200);
+  }
+  .payment-label { font-size: 11.5px; color: var(--gray-500); font-weight: 600; }
+  .payment-value { font-size: 15px; font-weight: 800; color: var(--text-primary); margin-top: 2px; }
+  .payment-item.cash { border-color: var(--gold); background: rgba(212,172,13,0.08); }
+  .payment-item.cash .payment-value { color: var(--gold-dark); }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 600px) {
+    .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .stat-value { font-size: 15px; }
+    .pump-config-item { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ===== ICONS ===== */
+  .icon { width: 18px; height: 18px; display: inline-block; text-align: center; font-style: normal; }
+
+  /* ===== COPYABLE ===== */
+  .copyable {
+    position: relative;
+    cursor: pointer;
+    user-select: all;
+  }
+  .copy-hint {
+    font-size: 10px;
+    color: var(--gold);
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+  .copyable:hover .copy-hint { opacity: 1; }
+
+  .flex-row { display: flex; align-items: center; gap: 8px; }
+  .flex-between { display: flex; align-items: center; justify-content: space-between; }
+  .mt-8 { margin-top: 8px; }
+  .mt-12 { margin-top: 12px; }
+  .mb-8 { margin-bottom: 8px; }
+  .text-center { text-align: center; }
+  .text-sm { font-size: 12px; }
+  .text-muted { color: var(--gray-500); }
+  .fw-bold { font-weight: 700; }
+  .text-gold { color: var(--gold-dark); }
+  .text-red { color: var(--red); }
+  .text-green { color: #27AE60; }
+
+  .section-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--red-dark);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--gold);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .tag-morning { background: #FFF8E1; color: #F57F17; }
+  .tag-evening { background: #EDE7F6; color: #4527A0; }
+  .tag-noon { background: #E8F5E9; color: #1B5E20; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOGIN OVERLAY -->
+  <div class="login-overlay open" id="loginOverlay">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo">⛽</div>
+        <div class="gold-line"></div>
+        <h2 id="stationNameLogin">محطة الوقود</h2>
+        <p>نظام إدارة المحطة المتكامل</p>
+      </div>
+      <div class="login-body">
+        <div class="form-group">
+          <label class="form-label">البريد الإلكتروني</label>
+          <input type="email" class="form-input" id="loginEmail" placeholder="example@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">كلمة المرور</label>
+          <input type="password" class="form-input" id="loginPassword" placeholder="••••••••">
+        </div>
+        <div id="loginError" class="alert alert-danger" style="display:none">بيانات الدخول غير صحيحة</div>
+        <button class="btn btn-primary btn-full mt-8" onclick="doLogin()">🔐 دخول</button>
+        <div class="text-center mt-8 text-sm text-muted">نظام إدارة محطات الوقود v1.0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETUP WIZARD -->
+  <div class="setup-overlay" id="setupOverlay">
+    <div class="setup-card">
+      <div class="setup-header">
+        <div class="setup-logo">⛽</div>
+        <h2>إعداد المحطة</h2>
+        <p>أدخل بيانات محطتك لبدء العمل</p>
+      </div>
+      <div class="setup-body">
+        <div class="step-indicator" id="stepIndicator"></div>
+
+        <!-- Step 1: Station Info -->
+        <div class="setup-step active" id="step1">
+          <div class="section-title">🏢 معلومات المحطة</div>
+          <div class="form-group">
+            <label class="form-label">اسم المحطة *</label>
+            <input type="text" class="form-input" id="s_stationName" placeholder="محطة النور">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الموقع</label>
+            <input type="text" class="form-input" id="s_stationLocation" placeholder="الرياض، حي النزهة">
+          </div>
+          <div class="form-group">
+            <label class="form-label">بريد المالك *</label>
+            <input type="email" class="form-input" id="s_ownerEmail" placeholder="owner@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">كلمة مرور المالك *</label>
+            <input type="password" class="form-input" id="s_ownerPass" placeholder="••••••••">
+          </div>
+          <div class="form-group">
+            <label class="form-label">يوم بدء الشهر (للتقارير الشهرية)</label>
+            <input type="number" class="form-input" id="s_monthStart" value="1" min="1" max="28" placeholder="1">
+          </div>
+        </div>
+
+        <!-- Step 2: Fuel Prices -->
+        <div class="setup-step" id="step2">
+          <div class="section-title">💰 أسعار الوقود (ريال/لتر)</div>
+          <div class="form-group">
+            <label class="form-label">سعر الديزل</label>
+            <input type="number" class="form-input" id="s_dieselPrice" value="0.69" step="0.01" placeholder="0.69">
+          </div>
+          <div class="form-group">
+            <label class="form-label">سعر 91</label>
+            <input type="number" class="form-input" id="s_91Price" value="1.29" step="0.01" placeholder="1.29">
+          </div>
+          <div class="form-group">
+            <label class="form-label">سعر 95</label>
+            <input type="number" class="form-input" id="s_95Price" value="1.79" step="0.01" placeholder="1.79">
+          </div>
+          <div class="section-title mt-12">⏰ الوردیات</div>
+          <div class="form-group">
+            <label class="form-label">عدد الورديات اليومية</label>
+            <select class="form-select" id="s_shiftsCount" onchange="renderShiftNames()">
+              <option value="2">2 وردية</option>
+              <option value="3">3 ورديات</option>
+              <option value="4">4 ورديات</option>
+            </select>
+          </div>
+          <div id="shiftNamesContainer"></div>
+          <div class="form-group mt-8">
+            <label class="form-label">الحد الأدنى للمخزون التحذيري (لتر)</label>
+            <input type="number" class="form-input" id="s_minStock" value="5000" placeholder="5000">
+          </div>
+        </div>
+
+        <!-- Step 3: Pumps -->
+        <div class="setup-step" id="step3">
+          <div class="section-title">⛽ إعداد الطلمبات</div>
+          <p class="text-sm text-muted mb-8">أضف الطلمبات وحدد نوع كل واحدة والعداد الافتتاحي</p>
+          <div id="pumpsContainer"></div>
+          <button class="btn btn-ghost btn-full mt-8" onclick="addPumpConfig()">+ إضافة طلمبة</button>
+        </div>
+
+        <!-- Step 4: Opening Stock -->
+        <div class="setup-step" id="step4">
+          <div class="section-title">🛢️ المخزون الافتتاحي (لتر)</div>
+          <div class="form-group">
+            <label class="form-label">مخزون الديزل</label>
+            <input type="number" class="form-input" id="s_dieselStock" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">مخزون 91</label>
+            <input type="number" class="form-input" id="s_91Stock" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">مخزون 95</label>
+            <input type="number" class="form-input" id="s_95Stock" placeholder="0">
+          </div>
+        </div>
+
+        <div class="flex-between mt-12">
+          <button class="btn btn-ghost" id="prevStepBtn" onclick="prevStep()" style="display:none">→ السابق</button>
+          <button class="btn btn-primary" id="nextStepBtn" onclick="nextStep()">التالي ←</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN HEADER -->
+  <div class="header" id="mainHeader" style="display:none">
+    <div class="header-title">
+      ⛽ <span id="headerStationName">المحطة</span>
+      <span class="gold" style="font-size:12px; opacity:0.8" id="headerDate"></span>
+    </div>
+    <div class="header-right">
+      <span class="badge-user" id="headerUser">مالك</span>
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="font-size:11px">خروج</button>
+    </div>
+  </div>
+
+  <!-- NAV BAR -->
+  <div class="nav-bar" id="mainNav" style="display:none">
+    <button class="nav-btn active" onclick="showPage('home', this)">🏠 الرئيسية</button>
+    <button class="nav-btn" onclick="showPage('entry', this)">📝 الإدخال</button>
+    <button class="nav-btn" onclick="showPage('meters', this)">🔢 العدادات</button>
+    <button class="nav-btn" onclick="showPage('log', this)">📋 السجل</button>
+    <button class="nav-btn" onclick="showPage('inventory', this)">🛢️ المخزون</button>
+    <button class="nav-btn" onclick="showPage('instant', this)">⚡ اللحظي</button>
+    <button class="nav-btn" onclick="showPage('supply', this)">🚛 التوريد</button>
+    <button class="nav-btn" onclick="showPage('reports', this)">📊 التقارير</button>
+    <button class="nav-btn" id="settingsNavBtn" onclick="showPage('settings', this)" style="display:none">⚙️ الإعدادات</button>
+  </div>
+
+  <!-- ===== PAGE: HOME ===== -->
+  <div class="page active" id="page-home">
+    <div id="homeAlerts"></div>
+
+    <!-- Today Summary -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📅 ملخص اليوم</span>
+        <span class="text-sm text-muted" id="todayDate">—</span>
+      </div>
+      <div class="card-body">
+        <div class="stats-grid">
+          <div class="stat-box diesel">
+            <div class="stat-label">⬛ ديزل اليوم</div>
+            <div class="stat-value copyable" id="home_todayDiesel">0<span class="copy-hint">نسخ</span></div>
+            <div class="stat-sub" id="home_todayDieselRial">0 ر.س</div>
+          </div>
+          <div class="stat-box n91">
+            <div class="stat-label">🟢 91 اليوم</div>
+            <div class="stat-value copyable" id="home_today91">0<span class="copy-hint">نسخ</span></div>
+            <div class="stat-sub" id="home_today91Rial">0 ر.س</div>
+          </div>
+          <div class="stat-box n95">
+            <div class="stat-label">🔴 95 اليوم</div>
+            <div class="stat-value copyable" id="home_today95">0<span class="copy-hint">نسخ</span></div>
+            <div class="stat-sub" id="home_today95Rial">0 ر.س</div>
+          </div>
+        </div>
+        <div class="totals-section mt-8">
+          <div class="totals-grid">
+            <div class="total-item">
+              <div class="total-label">إجمالي اليوم</div>
+              <div class="total-value copyable" id="home_todayTotal">0 لتر<span class="copy-hint">نسخ</span></div>
+            </div>
+            <div class="total-item">
+              <div class="total-label">المبلغ الإجمالي</div>
+              <div class="total-value copyable" id="home_todayMoney">0 ر.س<span class="copy-hint">نسخ</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Latest Shift -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🕐 آخر وردية</span>
+        <span id="home_lastShiftType" class="tag tag-morning">—</span>
+      </div>
+      <div class="card-body">
+        <div class="stats-grid">
+          <div class="stat-box diesel">
+            <div class="stat-label">ديزل</div>
+            <div class="stat-value" id="home_lastDiesel">0</div>
+            <div class="stat-sub" id="home_lastDieselR">0 ر.س</div>
+          </div>
+          <div class="stat-box n91">
+            <div class="stat-label">91</div>
+            <div class="stat-value" id="home_last91">0</div>
+            <div class="stat-sub" id="home_last91R">0 ر.س</div>
+          </div>
+          <div class="stat-box n95">
+            <div class="stat-label">95</div>
+            <div class="stat-value" id="home_last95">0</div>
+            <div class="stat-sub" id="home_last95R">0 ر.س</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventory Status -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🛢️ المخزون الحالي</span>
+      </div>
+      <div class="card-body">
+        <div id="inventoryStatusHome"></div>
+      </div>
+    </div>
+
+    <!-- Weekly & Monthly -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📈 الإحصائيات</span>
+      </div>
+      <div class="card-body">
+        <div class="flex-between mb-8">
+          <span class="fw-bold text-sm">📅 أسبوعياً (7 أيام)</span>
+          <span class="text-sm text-gold" id="home_weekMoney">0 ر.س</span>
+        </div>
+        <div class="stats-grid mb-8" style="gap:6px">
+          <div class="stat-box diesel" style="padding:8px">
+            <div class="stat-label" style="font-size:10px">ديزل</div>
+            <div class="stat-value" style="font-size:14px" id="home_weekDiesel">0</div>
+          </div>
+          <div class="stat-box n91" style="padding:8px">
+            <div class="stat-label" style="font-size:10px">91</div>
+            <div class="stat-value" style="font-size:14px" id="home_week91">0</div>
+          </div>
+          <div class="stat-box n95" style="padding:8px">
+            <div class="stat-label" style="font-size:10px">95</div>
+            <div class="stat-value" style="font-size:14px" id="home_week95">0</div>
+          </div>
+        </div>
+        <div class="flex-between mb-8">
+          <span class="fw-bold text-sm">🗓️ شهرياً</span>
+          <span class="text-sm text-gold" id="home_monthMoney">0 ر.س</span>
+        </div>
+        <div class="stats-grid" style="gap:6px">
+          <div class="stat-box diesel" style="padding:8px">
+            <div class="stat-label" style="font-size:10px">ديزل</div>
+            <div class="stat-value" style="font-size:14px" id="home_monthDiesel">0</div>
+          </div>
+          <div class="stat-box n91" style="padding:8px">
+            <div class="stat-label" style="font-size:10px">91</div>
+            <div class="stat-value" style="font-size:14px" id="home_month91">0</div>
+          </div>
+          <div class="stat-box n95" style="padding:8px">
+            <div class="stat-label" style="font-size:10px">95</div>
+            <div class="stat-value" style="font-size:14px" id="home_month95">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE: ENTRY ===== -->
+  <div class="page" id="page-entry">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📝 إدخال قراءات الوردية</span>
+      </div>
+      <div class="card-body">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div class="form-group">
+            <label class="form-label">التاريخ</label>
+            <input type="date" class="form-input" id="entry_date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">نوع الوردية</label>
+            <select class="form-select" id="entry_shiftType"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pumps Entry -->
+    <div id="pumpsEntryContainer"></div>
+
+    <!-- Calculate Button -->
+    <button class="btn btn-gold btn-full mb-8" onclick="calcEntry()">🔢 احسب الاستهلاك</button>
+
+    <!-- Results -->
+    <div id="entryResults" style="display:none">
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 نتائج الاستهلاك</span></div>
+        <div class="card-body">
+          <div class="stats-grid mb-8">
+            <div class="stat-box diesel">
+              <div class="stat-label">ديزل (لتر)</div>
+              <div class="stat-value" id="res_dieselL">0</div>
+              <div class="stat-sub" id="res_dieselR">0 ر.س</div>
+            </div>
+            <div class="stat-box n91">
+              <div class="stat-label">91 (لتر)</div>
+              <div class="stat-value" id="res_91L">0</div>
+              <div class="stat-sub" id="res_91R">0 ر.س</div>
+            </div>
+            <div class="stat-box n95">
+              <div class="stat-label">95 (لتر)</div>
+              <div class="stat-value" id="res_95L">0</div>
+              <div class="stat-sub" id="res_95R">0 ر.س</div>
+            </div>
+          </div>
+          <div class="totals-section">
+            <div class="total-item">
+              <div class="total-label">الإجمالي الكلي</div>
+              <div class="total-value copyable" id="res_totalMoney">0 ر.س<span class="copy-hint">نسخ</span></div>
+            </div>
+          </div>
+          <!-- Payment Split -->
+          <div class="mt-8">
+            <div class="section-title" style="font-size:13px; margin-bottom:8px">💳 تقسيم المبلغ</div>
+            <div class="payment-grid">
+              <div class="payment-item">
+                <div class="payment-label">🌐 شبكة</div>
+                <input type="number" class="form-input" id="pay_network" placeholder="0" oninput="calcCash()">
+              </div>
+              <div class="payment-item">
+                <div class="payment-label">📄 فواتير</div>
+                <input type="number" class="form-input" id="pay_invoices" placeholder="0" oninput="calcCash()">
+              </div>
+              <div class="payment-item">
+                <div class="payment-label">📦 تم توريده</div>
+                <input type="number" class="form-input" id="pay_supplied" placeholder="0" oninput="calcCash()">
+              </div>
+              <div class="payment-item cash">
+                <div class="payment-label">💵 نقدية</div>
+                <div class="payment-value" id="pay_cash">0</div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full mt-8" onclick="saveShift()">💾 حفظ الوردية</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE: METERS ===== -->
+  <div class="page" id="page-meters">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🔢 سجل العدادات</span></div>
+      <div class="card-body">
+        <div class="table-scroll">
+          <table id="metersTable">
+            <thead><tr id="metersTableHeader"></tr></thead>
+            <tbody id="metersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE: LOG ===== -->
+  <div class="page" id="page-log">
+    <div class="flex-between mb-8">
+      <div class="section-title" style="margin-bottom:0">📋 سجل الورديات</div>
+      <button class="btn btn-sm btn-ghost" onclick="editLastShift()">✏️ تعديل آخر وردية</button>
+    </div>
+    <div id="logContainer"></div>
+  </div>
+
+  <!-- ===== PAGE: INVENTORY ===== -->
+  <div class="page" id="page-inventory">
+    <!-- Adjust Stock -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🛢️ المخزون</span>
+        <button class="btn btn-sm btn-ghost" onclick="toggleAdjustStock()">⚖️ معادلة المخزون</button>
+      </div>
+      <div id="adjustStockPanel" style="display:none; padding:12px; border-bottom:1px solid var(--gray-200)">
+        <div class="section-title" style="font-size:13px">⚖️ معادلة المخزون</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+          <div class="form-group">
+            <label class="form-label">معادلة ديزل</label>
+            <input type="number" class="form-input" id="adj_diesel" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">معادلة 91</label>
+            <input type="number" class="form-input" id="adj_91" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">معادلة 95</label>
+            <input type="number" class="form-input" id="adj_95" placeholder="0">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="applyAdjustment()">✅ تطبيق المعادلة</button>
+      </div>
+      <div class="card-body">
+        <div class="inv-table-wrap">
+          <table class="inv-table">
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>الوردية</th>
+                <th class="col-divider diesel-color" style="background:#2C3E50">م. ديزل</th>
+                <th style="background:#2C3E50">م. 91</th>
+                <th style="background:#2C3E50">م. 95</th>
+                <th class="col-divider" style="background:#555">إست. ديزل</th>
+                <th style="background:#555">إست. 91</th>
+                <th style="background:#555">إست. 95</th>
+                <th class="col-divider" style="background:#27AE60">يوم ديزل</th>
+                <th style="background:#27AE60">يوم 91</th>
+                <th style="background:#27AE60">يوم 95</th>
+                <th class="col-divider" style="background:var(--gold-dark)">معادلة د</th>
+                <th style="background:var(--gold-dark)">معادلة 91</th>
+                <th style="background:var(--gold-dark)">معادلة 95</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE: INSTANT ===== -->
+  <div class="page" id="page-instant">
+    <div class="alert alert-info">⚡ الاستهلاك اللحظي — رقابي فقط، لا يؤثر على المخزون</div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">⚡ قراءات لحظية</span></div>
+      <div class="card-body">
+        <div id="instantPumpsContainer"></div>
+        <div class="flex-row mt-8">
+          <button class="btn btn-gold" onclick="calcInstant()">🔢 احسب الاستهلاك</button>
+          <button class="btn btn-primary" onclick="calcInstantReserve()">🛢️ احسب الاحتياطي</button>
+        </div>
+      </div>
+    </div>
+    <div id="instantResults" style="display:none">
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 النتائج اللحظية</span></div>
+        <div class="card-body">
+          <div class="stats-grid mb-8">
+            <div class="stat-box diesel"><div class="stat-label">ديزل</div><div class="stat-value" id="inst_diesel">0</div></div>
+            <div class="stat-box n91"><div class="stat-label">91</div><div class="stat-value" id="inst_91">0</div></div>
+            <div class="stat-box n95"><div class="stat-label">95</div><div class="stat-value" id="inst_95">0</div></div>
+          </div>
+          <div id="instantReserveResults"></div>
+          <button class="btn btn-primary btn-sm mt-8" onclick="sendToSupply()">📤 إرسال للتوريد</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE: SUPPLY ===== -->
+  <div class="page" id="page-supply">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🚛 تسجيل توريد جديد</span>
+      </div>
+      <div class="card-body">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div class="form-group">
+            <label class="form-label">نوع الوقود</label>
+            <select class="form-select" id="sup_type">
+              <option value="diesel">ديزل</option>
+              <option value="91">91</option>
+              <option value="95">95</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">الكمية (لتر)</label>
+            <input type="number" class="form-input" id="sup_qty" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">التاريخ</label>
+            <input type="date" class="form-input" id="sup_date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الفاتورة</label>
+            <input type="text" class="form-input" id="sup_invoice" placeholder="INV-001">
+          </div>
+          <div class="form-group">
+            <label class="form-label">اسم السائق</label>
+            <input type="text" class="form-input" id="sup_driver" placeholder="محمد أحمد">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم السيارة</label>
+            <input type="text" class="form-input" id="sup_truck" placeholder="1234 ABC">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">الناقل</label>
+          <input type="text" class="form-input" id="sup_carrier" placeholder="شركة التوريد">
+        </div>
+        <button class="btn btn-primary btn-full mt-8" onclick="saveSupply()">💾 حفظ التوريد</button>
+      </div>
+    </div>
+    <div class="section-title mt-12">📋 سجل التوريدات</div>
+    <div id="supplyLog"></div>
+  </div>
+
+  <!-- ===== PAGE: REPORTS ===== -->
+  <div class="page" id="page-reports">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📊 إنشاء تقرير</span></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">نوع التقرير</label>
+          <select class="form-select" id="rep_type" onchange="toggleReportOptions()">
+            <option value="today">يومي - اليوم</option>
+            <option value="week">أسبوعي</option>
+            <option value="month">شهري</option>
+            <option value="custom">مخصص</option>
+          </select>
+        </div>
+        <div id="customReportOptions" style="display:none">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group">
+              <label class="form-label">من تاريخ</label>
+              <input type="date" class="form-input" id="rep_from">
+            </div>
+            <div class="form-group">
+              <label class="form-label">إلى تاريخ</label>
+              <input type="date" class="form-input" id="rep_to">
+            </div>
+            <div class="form-group">
+              <label class="form-label">من وردية</label>
+              <select class="form-select" id="rep_fromShift"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">إلى وردية</label>
+              <select class="form-select" id="rep_toShift"></select>
+            </div>
+          </div>
+        </div>
+        <div class="flex-row mt-8">
+          <button class="btn btn-primary" onclick="generateReport()">🔄 إنشاء التقرير</button>
+          <button class="btn btn-gold" onclick="printReport()">🖨️ طباعة / PDF</button>
+        </div>
+      </div>
+    </div>
+    <div id="reportOutput"></div>
+  </div>
+
+  <!-- ===== PAGE: SETTINGS ===== -->
+  <div class="page" id="page-settings">
+    <div class="section-title">⚙️ الإعدادات</div>
+
+    <!-- Archive -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">📦 الأرشفة الشهرية</span></div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-8">يتم أرشفة البيانات بعد تجاوز يوم بداية الشهر بيوم واحد. تشفير الشهر السابق وحفظه.</p>
+        <button class="btn btn-gold" onclick="archiveMonth()">📦 أرشفة الشهر السابق</button>
+      </div>
+    </div>
+
+    <!-- Prices -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">💰 تحديث أسعار الوقود</span></div>
+      <div class="card-body">
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+          <div class="form-group">
+            <label class="form-label">ديزل (ر.س/لتر)</label>
+            <input type="number" class="form-input" id="cfg_dieselPrice" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">91 (ر.س/لتر)</label>
+            <input type="number" class="form-input" id="cfg_91Price" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">95 (ر.س/لتر)</label>
+            <input type="number" class="form-input" id="cfg_95Price" step="0.01">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="savePrices()">💾 حفظ الأسعار</button>
+      </div>
+    </div>
+
+    <!-- Add User -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">👤 إضافة موظف</span></div>
+      <div class="card-body">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div class="form-group">
+            <label class="form-label">البريد الإلكتروني</label>
+            <input type="email" class="form-input" id="newUserEmail" placeholder="emp@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">كلمة المرور</label>
+            <input type="password" class="form-input" id="newUserPass" placeholder="••••••••">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الاسم</label>
+            <input type="text" class="form-input" id="newUserName" placeholder="اسم الموظف">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الدور</label>
+            <select class="form-select" id="newUserRole">
+              <option value="employee">موظف</option>
+              <option value="supervisor">مشرف</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addUser()">➕ إضافة</button>
+      </div>
+    </div>
+
+    <!-- Users List -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">👥 المستخدمون</span></div>
+      <div class="card-body" id="usersList"></div>
+    </div>
+
+    <!-- Station Info -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">🏢 معلومات المحطة</span></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">اسم المحطة</label>
+          <input type="text" class="form-input" id="cfg_stationName">
+        </div>
+        <div class="form-group">
+          <label class="form-label">الموقع</label>
+          <input type="text" class="form-input" id="cfg_stationLocation">
+        </div>
+        <div class="form-group">
+          <label class="form-label">يوم بداية الشهر</label>
+          <input type="number" class="form-input" id="cfg_monthStart" min="1" max="28">
+        </div>
+        <div class="form-group">
+          <label class="form-label">الحد الأدنى للمخزون التحذيري</label>
+          <input type="number" class="form-input" id="cfg_minStock">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveStationInfo()">💾 حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHIFT DETAIL MODAL -->
+  <div class="modal-overlay" id="shiftDetailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="shiftDetailTitle">تفاصيل الوردية</span>
+        <button class="modal-close" onclick="closeModal('shiftDetailModal')">✕</button>
+      </div>
+      <div class="modal-body" id="shiftDetailBody"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===========================
+// DATA STORAGE
+// ===========================
+let DB = {
+  config: null,
+  users: [],
+  shifts: [],       // {id, date, shiftType, pumps:[{id,current,prev,consumption}], diesel,n91,n95,totalMoney,network,invoices,supplied,cash}
+  meters: [],       // {shiftId, date, shiftType, pumps:[{pumpId,reading,consumption}]}
+  inventory: [],    // {date, shiftType, diesel,n91,n95, consD,cons91,cons95, dayD,day91,day95, adjD,adj91,adj95, type:'shift'|'supply'|'adjust', qty,fuelType}
+  supply: [],       // {id,date,type,qty,invoice,driver,truck,carrier, meters:[], reserve:{d,n91,n95}}
+  archives: []
+};
+
+function saveDB() { localStorage.setItem('fuelStationDB', JSON.stringify(DB)); }
+function loadDB() {
+  const d = localStorage.getItem('fuelStationDB');
+  if (d) DB = JSON.parse(d);
+}
+
+// ===========================
+// SETUP WIZARD
+// ===========================
+let currentStep = 1;
+const totalSteps = 4;
+let setupPumps = [];
+
+function initSetupWizard() {
+  renderStepIndicator();
+  renderShiftNames();
+  addPumpConfig();
+  document.getElementById('setupOverlay').classList.add('open');
+}
+
+function renderStepIndicator() {
+  const c = document.getElementById('stepIndicator');
+  c.innerHTML = '';
+  for (let i = 1; i <= totalSteps; i++) {
+    c.innerHTML += `<div class="step-dot ${i <= currentStep ? 'active' : ''}"></div>`;
+  }
+}
+
+function renderShiftNames() {
+  const n = parseInt(document.getElementById('s_shiftsCount').value);
+  const defaults = [['صباحية','ص'],['مسائية','م'],['بعد الظهر','ب'],['منتصف الليل','ل']];
+  let html = '';
+  for (let i = 0; i < n; i++) {
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">اسم الوردية ${i+1}</label>
+        <input type="text" class="form-input" id="shiftName_${i}" value="${defaults[i][0]}" placeholder="صباحية">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">الاختصار</label>
+        <input type="text" class="form-input" id="shiftAbbr_${i}" value="${defaults[i][1]}" placeholder="ص">
+      </div>
+    </div>`;
+  }
+  document.getElementById('shiftNamesContainer').innerHTML = html;
+}
+
+function addPumpConfig() {
+  setupPumps.push({ name: `طلمبة ${setupPumps.length + 1}`, type: 'diesel', opening: 0 });
+  renderPumpsConfig();
+}
+
+function removePump(i) {
+  setupPumps.splice(i, 1);
+  renderPumpsConfig();
+}
+
+function renderPumpsConfig() {
+  const c = document.getElementById('pumpsContainer');
+  c.innerHTML = setupPumps.map((p, i) => `
+    <div class="pump-config-item">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">الاسم</label>
+        <input type="text" class="form-input" value="${p.name}" onchange="setupPumps[${i}].name=this.value" placeholder="طلمبة 1">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">النوع</label>
+        <select class="form-select" onchange="setupPumps[${i}].type=this.value">
+          <option value="diesel" ${p.type==='diesel'?'selected':''}>ديزل</option>
+          <option value="91" ${p.type==='91'?'selected':''}>91</option>
+          <option value="95" ${p.type==='95'?'selected':''}>95</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">العداد الافتتاحي</label>
+        <input type="number" class="form-input" value="${p.opening}" onchange="setupPumps[${i}].opening=parseFloat(this.value)||0" placeholder="0">
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="removePump(${i})" style="align-self:flex-end">🗑️</button>
+    </div>
+  `).join('');
+}
+
+function nextStep() {
+  if (!validateStep(currentStep)) return;
+  if (currentStep < totalSteps) {
+    document.getElementById(`step${currentStep}`).classList.remove('active');
+    currentStep++;
+    document.getElementById(`step${currentStep}`).classList.add('active');
+    renderStepIndicator();
+    document.getElementById('prevStepBtn').style.display = 'inline-flex';
+    if (currentStep === totalSteps) {
+      document.getElementById('nextStepBtn').textContent = '✅ بدء العمل';
+      document.getElementById('nextStepBtn').onclick = finishSetup;
+    }
+  }
+}
+
+function prevStep() {
+  if (currentStep > 1) {
+    document.getElementById(`step${currentStep}`).classList.remove('active');
+    currentStep--;
+    document.getElementById(`step${currentStep}`).classList.add('active');
+    renderStepIndicator();
+    document.getElementById('nextStepBtn').textContent = 'التالي ←';
+    document.getElementById('nextStepBtn').onclick = nextStep;
+    if (currentStep === 1) document.getElementById('prevStepBtn').style.display = 'none';
+  }
+}
+
+function validateStep(step) {
+  if (step === 1) {
+    const name = document.getElementById('s_stationName').value.trim();
+    const email = document.getElementById('s_ownerEmail').value.trim();
+    const pass = document.getElementById('s_ownerPass').value;
+    if (!name || !email || !pass) { alert('يرجى ملء جميع الحقول المطلوبة'); return false; }
+  }
+  if (step === 3 && setupPumps.length === 0) { alert('يرجى إضافة طلمبة واحدة على الأقل'); return false; }
+  return true;
+}
+
+function finishSetup() {
+  const shiftsCount = parseInt(document.getElementById('s_shiftsCount').value);
+  const shifts = [];
+  for (let i = 0; i < shiftsCount; i++) {
+    shifts.push({
+      name: document.getElementById(`shiftName_${i}`).value || `وردية ${i+1}`,
+      abbr: document.getElementById(`shiftAbbr_${i}`).value || (i+1).toString()
+    });
+  }
+
+  DB.config = {
+    stationName: document.getElementById('s_stationName').value.trim(),
+    stationLocation: document.getElementById('s_stationLocation').value.trim(),
+    ownerEmail: document.getElementById('s_ownerEmail').value.trim().toLowerCase(),
+    monthStart: parseInt(document.getElementById('s_monthStart').value) || 1,
+    prices: {
+      diesel: parseFloat(document.getElementById('s_dieselPrice').value) || 0.69,
+      n91: parseFloat(document.getElementById('s_91Price').value) || 1.29,
+      n95: parseFloat(document.getElementById('s_95Price').value) || 1.79
+    },
+    shifts,
+    shiftsPerDay: shiftsCount,
+    minStock: parseInt(document.getElementById('s_minStock').value) || 5000,
+    pumps: setupPumps.map((p, i) => ({ id: i, name: p.name, type: p.type, opening: p.opening })),
+    openingStock: {
+      diesel: parseFloat(document.getElementById('s_dieselStock').value) || 0,
+      n91: parseFloat(document.getElementById('s_91Stock').value) || 0,
+      n95: parseFloat(document.getElementById('s_95Stock').value) || 0
+    },
+    currentStock: {
+      diesel: parseFloat(document.getElementById('s_dieselStock').value) || 0,
+      n91: parseFloat(document.getElementById('s_91Stock').value) || 0,
+      n95: parseFloat(document.getElementById('s_95Stock').value) || 0
+    }
+  };
+
+  DB.users = [{ email: DB.config.ownerEmail, pass: document.getElementById('s_ownerPass').value, name: 'المالك', role: 'owner' }];
+
+  saveDB();
+  document.getElementById('setupOverlay').classList.remove('open');
+  showLoginScreen();
+}
+
+// ===========================
+// AUTH
+// ===========================
+let currentUser = null;
+
+function showLoginScreen() {
+  document.getElementById('stationNameLogin').textContent = DB.config?.stationName || 'محطة الوقود';
+  document.getElementById('loginOverlay').classList.add('open');
+}
+
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPassword').value;
+  const user = DB.users.find(u => u.email === email && u.pass === pass);
+  if (user) {
+    currentUser = user;
+    document.getElementById('loginOverlay').classList.remove('open');
+    document.getElementById('mainHeader').style.display = 'flex';
+    document.getElementById('mainNav').style.display = 'flex';
+    if (user.role === 'owner') document.getElementById('settingsNavBtn').style.display = 'inline-flex';
+    document.getElementById('headerStationName').textContent = DB.config.stationName;
+    document.getElementById('headerUser').textContent = user.name || user.role;
+    initApp();
+  } else {
+    document.getElementById('loginError').style.display = 'flex';
+  }
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('mainHeader').style.display = 'none';
+  document.getElementById('mainNav').style.display = 'none';
+  showLoginScreen();
+}
+
+// ===========================
+// APP INIT
+// ===========================
+function initApp() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('todayDate').textContent = formatDate(today);
+  document.getElementById('headerDate').textContent = formatDateShort(today);
+  document.getElementById('entry_date').value = today;
+  document.getElementById('sup_date').value = today;
+
+  // Populate shift selects
+  populateShiftSelects();
+  renderEntryPumps();
+  renderInstantPumps();
+  updateHomePage();
+  renderMetersTable();
+  renderLog();
+  renderInventoryTable();
+  renderSupplyLog();
+  renderSettingsPage();
+
+  // Enable copyable
+  enableCopyable();
+}
+
+function populateShiftSelects() {
+  const shifts = DB.config.shifts;
+  const selects = ['entry_shiftType', 'rep_fromShift', 'rep_toShift'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = shifts.map(s => `<option value="${s.abbr}">${s.name}</option>`).join('');
+  });
+}
+
+// ===========================
+// HOME PAGE
+// ===========================
+function updateHomePage() {
+  const cfg = DB.config;
+  const today = new Date().toISOString().split('T')[0];
+
+  // Today's shifts (rule 1: all shifts of same day)
+  const todayShifts = DB.shifts.filter(s => s.date === today);
+  const todayD = todayShifts.reduce((a, s) => a + (s.diesel || 0), 0);
+  const today91 = todayShifts.reduce((a, s) => a + (s.n91 || 0), 0);
+  const today95 = todayShifts.reduce((a, s) => a + (s.n95 || 0), 0);
+  const todayMoney = todayD * cfg.prices.diesel + today91 * cfg.prices.n91 + today95 * cfg.prices.n95;
+
+  document.getElementById('home_todayDiesel').innerHTML = fmt(todayD) + ' لتر<span class="copy-hint">نسخ</span>';
+  document.getElementById('home_todayDieselRial').textContent = fmt(todayD * cfg.prices.diesel, 2) + ' ر.س';
+  document.getElementById('home_today91').innerHTML = fmt(today91) + ' لتر<span class="copy-hint">نسخ</span>';
+  document.getElementById('home_today91Rial').textContent = fmt(today91 * cfg.prices.n91, 2) + ' ر.س';
+  document.getElementById('home_today95').innerHTML = fmt(today95) + ' لتر<span class="copy-hint">نسخ</span>';
+  document.getElementById('home_today95Rial').textContent = fmt(today95 * cfg.prices.n95, 2) + ' ر.س';
+  document.getElementById('home_todayTotal').innerHTML = fmt(todayD + today91 + today95) + ' لتر<span class="copy-hint">نسخ</span>';
+  document.getElementById('home_todayMoney').innerHTML = fmt(todayMoney, 2) + ' ر.س<span class="copy-hint">نسخ</span>';
+
+  // Latest shift
+  const last = DB.shifts[DB.shifts.length - 1];
+  if (last) {
+    const shiftName = cfg.shifts.find(s => s.abbr === last.shiftType)?.name || last.shiftType;
+    document.getElementById('home_lastShiftType').textContent = shiftName;
+    document.getElementById('home_lastDiesel').textContent = fmt(last.diesel);
+    document.getElementById('home_lastDieselR').textContent = fmt(last.diesel * cfg.prices.diesel, 2) + ' ر.س';
+    document.getElementById('home_last91').textContent = fmt(last.n91);
+    document.getElementById('home_last91R').textContent = fmt(last.n91 * cfg.prices.n91, 2) + ' ر.س';
+    document.getElementById('home_last95').textContent = fmt(last.n95);
+    document.getElementById('home_last95R').textContent = fmt(last.n95 * cfg.prices.n95, 2) + ' ر.س';
+  }
+
+  // Inventory
+  const stock = cfg.currentStock;
+  const minStock = cfg.minStock;
+  const avg = getAvgConsumption(10);
+
+  let alertsHtml = '';
+  const invHtml = ['diesel','n91','n95'].map(type => {
+    const labels = {diesel:'ديزل', n91:'91', n95:'95'};
+    const val = stock[type] || 0;
+    const pct = Math.min(100, (val / (minStock * 4)) * 100);
+    const color = type === 'diesel' ? '#2C3E50' : type === 'n91' ? '#27AE60' : 'var(--red)';
+    const days = avg[type] > 0 ? (val / avg[type]).toFixed(1) : '∞';
+    if (val < minStock) alertsHtml += `<div class="alert alert-danger">⚠️ مخزون ${labels[type]} أقل من الحد الأدنى! (${fmt(val)} لتر)</div>`;
+    return `<div style="margin-bottom:10px">
+      <div class="flex-between mb-8">
+        <span class="fw-bold" style="color:${color}">${labels[type]}</span>
+        <span class="text-sm"><strong>${fmt(val)}</strong> لتر | متبقي: <strong class="text-gold">${days} يوم</strong></span>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('homeAlerts').innerHTML = alertsHtml;
+  document.getElementById('inventoryStatusHome').innerHTML = invHtml;
+
+  // Weekly (last 7 days)
+  const w7 = getConsumptionRange(7);
+  document.getElementById('home_weekDiesel').textContent = fmt(w7.diesel);
+  document.getElementById('home_week91').textContent = fmt(w7.n91);
+  document.getElementById('home_week95').textContent = fmt(w7.n95);
+  document.getElementById('home_weekMoney').textContent = fmt(w7.diesel*cfg.prices.diesel + w7.n91*cfg.prices.n91 + w7.n95*cfg.prices.n95, 2) + ' ر.س';
+
+  // Monthly
+  const mRange = getMonthRange();
+  document.getElementById('home_monthDiesel').textContent = fmt(mRange.diesel);
+  document.getElementById('home_month91').textContent = fmt(mRange.n91);
+  document.getElementById('home_month95').textContent = fmt(mRange.n95);
+  document.getElementById('home_monthMoney').textContent = fmt(mRange.diesel*cfg.prices.diesel + mRange.n91*cfg.prices.n91 + mRange.n95*cfg.prices.n95, 2) + ' ر.س';
+}
+
+function getAvgConsumption(days) {
+  const now = new Date();
+  const avg = { diesel: 0, n91: 0, n95: 0 };
+  const byDay = {};
+  DB.shifts.forEach(s => {
+    if (!byDay[s.date]) byDay[s.date] = { diesel: 0, n91: 0, n95: 0 };
+    byDay[s.date].diesel += s.diesel || 0;
+    byDay[s.date].n91 += s.n91 || 0;
+    byDay[s.date].n95 += s.n95 || 0;
+  });
+  const dates = Object.keys(byDay).sort().slice(-days);
+  if (dates.length === 0) return avg;
+  dates.forEach(d => {
+    avg.diesel += byDay[d].diesel;
+    avg.n91 += byDay[d].n91;
+    avg.n95 += byDay[d].n95;
+  });
+  avg.diesel /= dates.length;
+  avg.n91 /= dates.length;
+  avg.n95 /= dates.length;
+  return avg;
+}
+
+function getConsumptionRange(days) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  const res = { diesel: 0, n91: 0, n95: 0 };
+  DB.shifts.filter(s => s.date >= cutoffStr).forEach(s => {
+    res.diesel += s.diesel || 0;
+    res.n91 += s.n91 || 0;
+    res.n95 += s.n95 || 0;
+  });
+  return res;
+}
+
+function getMonthRange() {
+  const now = new Date();
+  const day = now.getDate();
+  const monthStart = DB.config.monthStart || 1;
+  let from;
+  if (day >= monthStart) {
+    from = new Date(now.getFullYear(), now.getMonth(), monthStart);
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth() - 1, monthStart);
+  }
+  const fromStr = from.toISOString().split('T')[0];
+  const res = { diesel: 0, n91: 0, n95: 0 };
+  DB.shifts.filter(s => s.date >= fromStr).forEach(s => {
+    res.diesel += s.diesel || 0;
+    res.n91 += s.n91 || 0;
+    res.n95 += s.n95 || 0;
+  });
+  return res;
+}
+
+// ===========================
+// ENTRY PAGE
+// ===========================
+function renderEntryPumps() {
+  const pumps = DB.config.pumps;
+  const types = ['diesel','n91','n95'];
+  const labels = {diesel:'ديزل', n91:'91', n95:'95'};
+  const colors = {diesel:'#2C3E50', n91:'#27AE60', n95:'var(--red)'};
+
+  let html = '';
+  types.forEach(type => {
+    const typePumps = pumps.filter(p => p.type === type);
+    if (typePumps.length === 0) return;
+    html += `<div class="card">
+      <div class="card-header">
+        <span class="card-title" style="color:${colors[type]}">⛽ ${labels[type]}</span>
+      </div>
+      <div class="card-body">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;">`;
+    typePumps.forEach(p => {
+      const lastReading = getLastReading(p.id);
+      html += `<div style="background:var(--gray-100);border-radius:8px;padding:10px;">
+        <div class="fw-bold text-sm mb-8">${p.name}</div>
+        <div class="text-muted" style="font-size:11px">السابق: <strong>${fmt(lastReading)}</strong></div>
+        <div class="form-group" style="margin-top:6px;margin-bottom:0">
+          <label class="form-label">العداد الحالي</label>
+          <input type="number" class="form-input" id="pump_${p.id}" placeholder="${lastReading}" 
+            oninput="showPumpConsumption(${p.id}, ${lastReading})">
+          <div class="consumption-display" id="cons_${p.id}"></div>
+        </div>
+      </div>`;
+    });
+    html += '</div></div></div>';
+  });
+  document.getElementById('pumpsEntryContainer').innerHTML = html;
+}
+
+function getLastReading(pumpId) {
+  // Search meters in reverse
+  for (let i = DB.meters.length - 1; i >= 0; i--) {
+    const m = DB.meters[i];
+    const pumpData = m.pumps.find(p => p.pumpId === pumpId);
+    if (pumpData) return pumpData.reading;
+  }
+  return DB.config.pumps.find(p => p.id === pumpId)?.opening || 0;
+}
+
+function showPumpConsumption(pumpId, prevReading) {
+  const current = parseFloat(document.getElementById(`pump_${pumpId}`).value) || 0;
+  const cons = current - prevReading;
+  const el = document.getElementById(`cons_${pumpId}`);
+  if (current > 0) {
+    if (cons < 0) {
+      el.textContent = '⚠️ خطأ: العداد الحالي أقل من السابق';
+      el.style.color = 'var(--red)';
+    } else {
+      el.textContent = `الاستهلاك: ${fmt(cons)} لتر`;
+      el.style.color = 'var(--red)';
+    }
+  } else {
+    el.textContent = '';
+  }
+}
+
+function calcEntry() {
+  const cfg = DB.config;
+  const pumps = cfg.pumps;
+  let totals = { diesel: 0, n91: 0, n95: 0 };
+  let hasError = false;
+  let missingPumps = [];
+
+  pumps.forEach(p => {
+    const el = document.getElementById(`pump_${p.id}`);
+    if (!el) return;
+    const val = parseFloat(el.value);
+    if (!val || val === 0) { missingPumps.push(p.name); return; }
+    const prev = getLastReading(p.id);
+    const cons = val - prev;
+    if (cons < 0) { hasError = true; return; }
+    totals[p.type === 'diesel' ? 'diesel' : p.type === '91' ? 'n91' : 'n95'] += cons;
+  });
+
+  if (hasError) { alert('يوجد عدادات بها أخطاء (العداد الحالي أقل من السابق)'); return; }
+
+  // Save to meters (even before full save)
+  const date = document.getElementById('entry_date').value;
+  const shiftType = document.getElementById('entry_shiftType').value;
+  const meterEntry = { date, shiftType, pumps: [] };
+  pumps.forEach(p => {
+    const el = document.getElementById(`pump_${p.id}`);
+    const val = parseFloat(el?.value) || 0;
+    if (val > 0) {
+      const prev = getLastReading(p.id);
+      meterEntry.pumps.push({ pumpId: p.id, reading: val, consumption: val - prev });
+    }
+  });
+  // Temporarily store (will be confirmed on save)
+  window._pendingMeter = meterEntry;
+  window._pendingTotals = totals;
+
+  // Display results
+  document.getElementById('res_dieselL').textContent = fmt(totals.diesel);
+  document.getElementById('res_dieselR').textContent = fmt(totals.diesel * cfg.prices.diesel, 2) + ' ر.س';
+  document.getElementById('res_91L').textContent = fmt(totals.n91);
+  document.getElementById('res_91R').textContent = fmt(totals.n91 * cfg.prices.n91, 2) + ' ر.س';
+  document.getElementById('res_95L').textContent = fmt(totals.n95);
+  document.getElementById('res_95R').textContent = fmt(totals.n95 * cfg.prices.n95, 2) + ' ر.س';
+
+  const total = totals.diesel * cfg.prices.diesel + totals.n91 * cfg.prices.n91 + totals.n95 * cfg.prices.n95;
+  document.getElementById('res_totalMoney').innerHTML = fmt(total, 2) + ' ر.س<span class="copy-hint">نسخ</span>';
+  window._pendingTotal = total;
+  document.getElementById('entryResults').style.display = 'block';
+  calcCash();
+}
+
+function calcCash() {
+  const total = window._pendingTotal || 0;
+  const network = parseFloat(document.getElementById('pay_network').value) || 0;
+  const invoices = parseFloat(document.getElementById('pay_invoices').value) || 0;
+  const supplied = parseFloat(document.getElementById('pay_supplied').value) || 0;
+  const cash = total - network - invoices - supplied;
+  document.getElementById('pay_cash').textContent = fmt(Math.max(0, cash), 2);
+}
+
+function saveShift() {
+  if (!window._pendingMeter) { alert('يرجى احتساب الاستهلاك أولاً'); return; }
+  const cfg = DB.config;
+  const date = document.getElementById('entry_date').value;
+  const shiftType = document.getElementById('entry_shiftType').value;
+  const totals = window._pendingTotals;
+  const total = window._pendingTotal;
+  const network = parseFloat(document.getElementById('pay_network').value) || 0;
+  const invoices = parseFloat(document.getElementById('pay_invoices').value) || 0;
+  const supplied = parseFloat(document.getElementById('pay_supplied').value) || 0;
+  const cash = Math.max(0, total - network - invoices - supplied);
+
+  const shift = {
+    id: Date.now(),
+    date, shiftType,
+    diesel: totals.diesel, n91: totals.n91, n95: totals.n95,
+    totalMoney: total,
+    network, invoices, supplied, cash,
+    pumps: window._pendingMeter.pumps
+  };
+
+  DB.shifts.push(shift);
+  DB.meters.push(window._pendingMeter);
+
+  // Update inventory
+  cfg.currentStock.diesel -= totals.diesel;
+  cfg.currentStock.n91 -= totals.n91;
+  cfg.currentStock.n95 -= totals.n95;
+
+  // Add inventory row
+  const todayShifts = DB.shifts.filter(s => s.date === date);
+  const dayD = todayShifts.reduce((a, s) => a + s.diesel, 0);
+  const day91 = todayShifts.reduce((a, s) => a + s.n91, 0);
+  const day95 = todayShifts.reduce((a, s) => a + s.n95, 0);
+
+  DB.inventory.push({
+    date, shiftType,
+    diesel: cfg.currentStock.diesel,
+    n91: cfg.currentStock.n91,
+    n95: cfg.currentStock.n95,
+    consD: totals.diesel, cons91: totals.n91, cons95: totals.n95,
+    dayD, day91, day95,
+    adjD: 0, adj91: 0, adj95: 0,
+    type: 'shift'
+  });
+
+  saveDB();
+
+  // Reset form
+  DB.config.pumps.forEach(p => {
+    const el = document.getElementById(`pump_${p.id}`);
+    if (el) el.value = '';
+    const cons = document.getElementById(`cons_${p.id}`);
+    if (cons) cons.textContent = '';
+  });
+  document.getElementById('entryResults').style.display = 'none';
+  document.getElementById('pay_network').value = '';
+  document.getElementById('pay_invoices').value = '';
+  document.getElementById('pay_supplied').value = '';
+  document.getElementById('pay_cash').textContent = '0';
+  window._pendingMeter = null;
+  window._pendingTotals = null;
+  window._pendingTotal = 0;
+
+  updateHomePage();
+  renderMetersTable();
+  renderLog();
+  renderInventoryTable();
+
+  alert('✅ تم حفظ الوردية بنجاح!');
+}
+
+// ===========================
+// METERS PAGE
+// ===========================
+function renderMetersTable() {
+  const pumps = DB.config.pumps;
+  const header = document.getElementById('metersTableHeader');
+  const body = document.getElementById('metersTableBody');
+
+  header.innerHTML = '<th>التاريخ</th><th>الوردية</th>' + pumps.map(p => `<th>${p.name}<br><span class="badge badge-${p.type==='diesel'?'diesel':p.type==='91'?'91':'95'}" style="font-size:9px">${p.type==='diesel'?'ديزل':p.type}</span></th>`).join('');
+
+  const rows = [...DB.meters].reverse();
+  body.innerHTML = rows.map(m => {
+    const pumpCells = pumps.map(p => {
+      const pd = m.pumps.find(x => x.pumpId === p.id);
+      if (!pd) return '<td>—</td>';
+      return `<td>${fmt(pd.reading)}<br><span style="font-size:10px;color:var(--red)">↓${fmt(pd.consumption)}</span></td>`;
+    }).join('');
+    const shiftName = DB.config.shifts.find(s => s.abbr === m.shiftType)?.abbr || m.shiftType;
+    return `<tr><td>${formatDateShort(m.date)}</td><td>${shiftName}</td>${pumpCells}</tr>`;
+  }).join('') || '<tr><td colspan="100" class="text-center text-muted" style="padding:20px">لا توجد بيانات</td></tr>';
+}
+
+// ===========================
+// LOG PAGE
+// ===========================
+function renderLog() {
+  const shifts = [...DB.shifts].reverse();
+  const cfg = DB.config;
+  let html = '';
+  if (shifts.length === 0) {
+    html = '<div class="alert alert-info">لا توجد ورديات مسجلة بعد</div>';
+  } else {
+    shifts.forEach((s, i) => {
+      const shiftName = cfg.shifts.find(x => x.abbr === s.shiftType)?.name || s.shiftType;
+      const isFirst = i === 0;
+      html += `<div class="shift-row" onclick="this.classList.toggle('expanded')">
+        <div class="shift-row-header">
+          <div>
+            <span class="fw-bold">${formatDate(s.date)}</span>
+            <span class="tag tag-morning" style="margin-right:6px">${shiftName}</span>
+            ${isFirst ? `<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();editShift('${s.id}')" style="font-size:11px">✏️</button>` : ''}
+          </div>
+          <span class="text-gold fw-bold">${fmt(s.totalMoney, 2)} ر.س</span>
+        </div>
+        <div class="shift-row-body">
+          <div class="stats-grid mb-8" style="gap:6px">
+            <div class="stat-box diesel" style="padding:8px"><div class="stat-label">ديزل</div><div class="stat-value" style="font-size:14px">${fmt(s.diesel)} لتر</div></div>
+            <div class="stat-box n91" style="padding:8px"><div class="stat-label">91</div><div class="stat-value" style="font-size:14px">${fmt(s.n91)} لتر</div></div>
+            <div class="stat-box n95" style="padding:8px"><div class="stat-label">95</div><div class="stat-value" style="font-size:14px">${fmt(s.n95)} لتر</div></div>
+          </div>
+          <div class="payment-grid" style="grid-template-columns:repeat(4,1fr);gap:6px">
+            <div class="payment-item" style="padding:6px"><div class="payment-label">شبكة</div><div class="payment-value" style="font-size:13px">${fmt(s.network, 2)}</div></div>
+            <div class="payment-item" style="padding:6px"><div class="payment-label">فواتير</div><div class="payment-value" style="font-size:13px">${fmt(s.invoices, 2)}</div></div>
+            <div class="payment-item" style="padding:6px"><div class="payment-label">توريد</div><div class="payment-value" style="font-size:13px">${fmt(s.supplied, 2)}</div></div>
+            <div class="payment-item cash" style="padding:6px"><div class="payment-label">نقدية</div><div class="payment-value" style="font-size:13px">${fmt(s.cash, 2)}</div></div>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+  document.getElementById('logContainer').innerHTML = html;
+}
+
+function editShift(id) {
+  const shift = DB.shifts.find(s => s.id == id);
+  if (!shift) return;
+  const newTotal = prompt('تعديل الإجمالي الكلي:', shift.totalMoney);
+  if (newTotal !== null) {
+    shift.totalMoney = parseFloat(newTotal) || shift.totalMoney;
+    saveDB();
+    renderLog();
+    updateHomePage();
+  }
+}
+
+function editLastShift() {
+  if (DB.shifts.length === 0) { alert('لا توجد ورديات'); return; }
+  editShift(DB.shifts[DB.shifts.length - 1].id);
+}
+
+// ===========================
+// INVENTORY PAGE
+// ===========================
+function renderInventoryTable() {
+  const rows = [...DB.inventory].reverse();
+  const body = document.getElementById('inventoryTableBody');
+  body.innerHTML = rows.map(r => {
+    const typeTag = r.type === 'supply' ? '🚛' : r.type === 'adjust' ? '⚖️' : '';
+    return `<tr>
+      <td>${formatDateShort(r.date)}</td>
+      <td>${r.shiftType || ''} ${typeTag}</td>
+      <td class="col-divider" style="font-weight:700">${fmt(r.diesel)}</td>
+      <td style="font-weight:700">${fmt(r.n91)}</td>
+      <td style="font-weight:700">${fmt(r.n95)}</td>
+      <td class="col-divider text-red">${fmt(r.consD)}</td>
+      <td class="text-red">${fmt(r.cons91)}</td>
+      <td class="text-red">${fmt(r.cons95)}</td>
+      <td class="col-divider" style="color:#27AE60;font-weight:700">${fmt(r.dayD)}</td>
+      <td style="color:#27AE60;font-weight:700">${fmt(r.day91)}</td>
+      <td style="color:#27AE60;font-weight:700">${fmt(r.day95)}</td>
+      <td class="col-divider text-gold">${r.adjD ? fmt(r.adjD) : '—'}</td>
+      <td class="text-gold">${r.adj91 ? fmt(r.adj91) : '—'}</td>
+      <td class="text-gold">${r.adj95 ? fmt(r.adj95) : '—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="14" class="text-center text-muted" style="padding:20px">لا توجد بيانات</td></tr>';
+}
+
+function toggleAdjustStock() {
+  const panel = document.getElementById('adjustStockPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function applyAdjustment() {
+  const d = parseFloat(document.getElementById('adj_diesel').value) || 0;
+  const n91 = parseFloat(document.getElementById('adj_91').value) || 0;
+  const n95 = parseFloat(document.getElementById('adj_95').value) || 0;
+  if (d === 0 && n91 === 0 && n95 === 0) return;
+
+  DB.config.currentStock.diesel += d;
+  DB.config.currentStock.n91 += n91;
+  DB.config.currentStock.n95 += n95;
+
+  const today = new Date().toISOString().split('T')[0];
+  DB.inventory.push({
+    date: today, shiftType: '',
+    diesel: DB.config.currentStock.diesel,
+    n91: DB.config.currentStock.n91,
+    n95: DB.config.currentStock.n95,
+    consD: 0, cons91: 0, cons95: 0,
+    dayD: 0, day91: 0, day95: 0,
+    adjD: d, adj91: n91, adj95: n95,
+    type: 'adjust'
+  });
+
+  saveDB();
+  renderInventoryTable();
+  updateHomePage();
+  document.getElementById('adjustStockPanel').style.display = 'none';
+  document.getElementById('adj_diesel').value = '';
+  document.getElementById('adj_91').value = '';
+  document.getElementById('adj_95').value = '';
+  alert('✅ تم تطبيق معادلة المخزون');
+}
+
+// ===========================
+// INSTANT PAGE
+// ===========================
+function renderInstantPumps() {
+  const pumps = DB.config.pumps;
+  const colors = {diesel:'#2C3E50', n91:'#27AE60', n95:'var(--red)'};
+  const labels = {diesel:'ديزل', n91:'91', n95:'95'};
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">';
+  pumps.forEach(p => {
+    const prev = getLastReading(p.id);
+    html += `<div style="background:var(--gray-100);border-radius:8px;padding:10px;border-top:3px solid ${colors[p.type==='91'?'n91':p.type==='95'?'n95':'diesel']}">
+      <div class="fw-bold text-sm mb-8">${p.name} <span class="badge badge-${p.type==='diesel'?'diesel':p.type==='91'?'91':'95'}">${p.type==='diesel'?'ديزل':p.type}</span></div>
+      <div class="text-muted" style="font-size:11px">السابق: ${fmt(prev)}</div>
+      <div class="form-group" style="margin-top:6px;margin-bottom:0">
+        <input type="number" class="form-input" id="inst_pump_${p.id}" placeholder="${prev}" oninput="showInstCons(${p.id},${prev})">
+        <div class="consumption-display" id="inst_cons_${p.id}"></div>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('instantPumpsContainer').innerHTML = html;
+}
+
+function showInstCons(pumpId, prev) {
+  const val = parseFloat(document.getElementById(`inst_pump_${pumpId}`).value) || 0;
+  const el = document.getElementById(`inst_cons_${pumpId}`);
+  if (val > 0) el.textContent = `الاستهلاك: ${fmt(val - prev)} لتر`;
+}
+
+function calcInstant() {
+  const pumps = DB.config.pumps;
+  let totals = { diesel: 0, n91: 0, n95: 0 };
+  pumps.forEach(p => {
+    const val = parseFloat(document.getElementById(`inst_pump_${p.id}`)?.value) || 0;
+    if (val > 0) {
+      const prev = getLastReading(p.id);
+      const key = p.type === 'diesel' ? 'diesel' : p.type === '91' ? 'n91' : 'n95';
+      totals[key] += val - prev;
+    }
+  });
+  window._instTotals = totals;
+  document.getElementById('inst_diesel').textContent = fmt(totals.diesel);
+  document.getElementById('inst_91').textContent = fmt(totals.n91);
+  document.getElementById('inst_95').textContent = fmt(totals.n95);
+  document.getElementById('instantResults').style.display = 'block';
+  document.getElementById('instantReserveResults').innerHTML = '';
+}
+
+function calcInstantReserve() {
+  calcInstant();
+  const stock = DB.config.currentStock;
+  const totals = window._instTotals || { diesel: 0, n91: 0, n95: 0 };
+  const res = {
+    diesel: stock.diesel - totals.diesel,
+    n91: stock.n91 - totals.n91,
+    n95: stock.n95 - totals.n95
+  };
+  window._instReserve = res;
+  document.getElementById('instantReserveResults').innerHTML = `
+    <div class="section-title" style="font-size:13px;margin-top:8px">🛢️ الاحتياطي المتبقي في الخزان</div>
+    <div class="stats-grid">
+      <div class="stat-box diesel"><div class="stat-label">ديزل</div><div class="stat-value" style="font-size:14px">${fmt(res.diesel)}</div><div class="stat-sub">لتر</div></div>
+      <div class="stat-box n91"><div class="stat-label">91</div><div class="stat-value" style="font-size:14px">${fmt(res.n91)}</div><div class="stat-sub">لتر</div></div>
+      <div class="stat-box n95"><div class="stat-label">95</div><div class="stat-value" style="font-size:14px">${fmt(res.n95)}</div><div class="stat-sub">لتر</div></div>
+    </div>`;
+}
+
+function sendToSupply() {
+  showPage('supply', document.querySelector('.nav-btn:nth-child(7)'));
+  // Pre-fill from instant data
+  if (window._instReserve) {
+    // Can be used for reference in supply page
+  }
+}
+
+// ===========================
+// SUPPLY PAGE
+// ===========================
+function saveSupply() {
+  const type = document.getElementById('sup_type').value;
+  const qty = parseFloat(document.getElementById('sup_qty').value) || 0;
+  if (qty <= 0) { alert('يرجى إدخال الكمية'); return; }
+
+  const entry = {
+    id: Date.now(),
+    date: document.getElementById('sup_date').value,
+    type, qty,
+    invoice: document.getElementById('sup_invoice').value,
+    driver: document.getElementById('sup_driver').value,
+    truck: document.getElementById('sup_truck').value,
+    carrier: document.getElementById('sup_carrier').value
+  };
+
+  DB.supply.push(entry);
+
+  // Update stock
+  const key = type === 'diesel' ? 'diesel' : type === '91' ? 'n91' : 'n95';
+  DB.config.currentStock[key] += qty;
+
+  // Add inventory row
+  const today = new Date().toISOString().split('T')[0];
+  const last = DB.inventory[DB.inventory.length - 1] || { diesel: 0, n91: 0, n95: 0 };
+  const newD = type === 'diesel' ? last.diesel + qty : DB.config.currentStock.diesel;
+  const new91 = type === '91' ? last.n91 + qty : DB.config.currentStock.n91;
+  const new95 = type === '95' ? last.n95 + qty : DB.config.currentStock.n95;
+
+  DB.inventory.push({
+    date: entry.date, shiftType: '🚛',
+    diesel: DB.config.currentStock.diesel,
+    n91: DB.config.currentStock.n91,
+    n95: DB.config.currentStock.n95,
+    consD: 0, cons91: 0, cons95: 0,
+    dayD: 0, day91: 0, day95: 0,
+    adjD: 0, adj91: 0, adj95: 0,
+    type: 'supply', supplyQty: qty, supplyFuel: type
+  });
+
+  saveDB();
+  renderSupplyLog();
+  renderInventoryTable();
+  updateHomePage();
+
+  // Clear form
+  ['sup_qty','sup_invoice','sup_driver','sup_truck','sup_carrier'].forEach(id => document.getElementById(id).value = '');
+  alert('✅ تم تسجيل التوريد بنجاح!');
+}
+
+function renderSupplyLog() {
+  const entries = [...DB.supply].reverse();
+  const labels = {diesel:'ديزل', '91':'91', '95':'95'};
+  let html = '';
+  if (entries.length === 0) {
+    html = '<div class="alert alert-info">لا توجد توريدات مسجلة</div>';
+  } else {
+    entries.forEach(s => {
+      html += `<div class="shift-row" onclick="this.classList.toggle('expanded')">
+        <div class="shift-row-header">
+          <div><span class="fw-bold">${formatDateShort(s.date)}</span> 
+            <span class="badge badge-${s.type==='diesel'?'diesel':s.type==='91'?'91':'95'}" style="margin-right:6px">${labels[s.type]}</span>
+          </div>
+          <span class="text-gold fw-bold">${fmt(s.qty)} لتر</span>
+        </div>
+        <div class="shift-row-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12.5px">
+            <div>🧾 فاتورة: <strong>${s.invoice || '—'}</strong></div>
+            <div>🚚 سائق: <strong>${s.driver || '—'}</strong></div>
+            <div>🚛 سيارة: <strong>${s.truck || '—'}</strong></div>
+            <div>🏢 ناقل: <strong>${s.carrier || '—'}</strong></div>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+  document.getElementById('supplyLog').innerHTML = html;
+}
+
+// ===========================
+// REPORTS PAGE
+// ===========================
+function toggleReportOptions() {
+  const type = document.getElementById('rep_type').value;
+  document.getElementById('customReportOptions').style.display = type === 'custom' ? 'block' : 'none';
+}
+
+function generateReport() {
+  const type = document.getElementById('rep_type').value;
+  const cfg = DB.config;
+  let fromDate, toDate;
+  const today = new Date().toISOString().split('T')[0];
+
+  if (type === 'today') { fromDate = toDate = today; }
+  else if (type === 'week') {
+    const d = new Date(); d.setDate(d.getDate() - 7);
+    fromDate = d.toISOString().split('T')[0]; toDate = today;
+  } else if (type === 'month') {
+    const m = getMonthStartDate();
+    fromDate = m; toDate = today;
+  } else {
+    fromDate = document.getElementById('rep_from').value;
+    toDate = document.getElementById('rep_to').value;
+  }
+
+  const filtered = DB.shifts.filter(s => s.date >= fromDate && s.date <= toDate);
+  if (filtered.length === 0) { document.getElementById('reportOutput').innerHTML = '<div class="alert alert-warning">لا توجد بيانات لهذه الفترة</div>'; return; }
+
+  const totals = { diesel: 0, n91: 0, n95: 0, money: 0, network: 0, invoices: 0, supplied: 0 };
+  filtered.forEach(s => {
+    totals.diesel += s.diesel || 0;
+    totals.n91 += s.n91 || 0;
+    totals.n95 += s.n95 || 0;
+    totals.money += s.totalMoney || 0;
+    totals.network += s.network || 0;
+    totals.invoices += s.invoices || 0;
+    totals.supplied += s.supplied || 0;
+  });
+
+  const days = Math.max(1, Math.ceil((new Date(toDate) - new Date(fromDate)) / 86400000) + 1);
+  const avgD = totals.diesel / days;
+  const avg91 = totals.n91 / days;
+  const avg95 = totals.n95 / days;
+
+  const supplyInPeriod = DB.supply.filter(s => s.date >= fromDate && s.date <= toDate);
+  const lastMeters = DB.config.pumps.map(p => ({ name: p.name, reading: getLastReading(p.id) }));
+  const stock = cfg.currentStock;
+
+  const html = `<div class="card" id="reportCard">
+    <div class="card-header">
+      <span class="card-title">📊 التقرير</span>
+      <span class="text-sm text-muted">${formatDateShort(fromDate)} — ${formatDateShort(toDate)}</span>
+    </div>
+    <div class="card-body">
+      <div class="fw-bold mb-8" style="font-size:16px">🏢 ${cfg.stationName}</div>
+      <div class="text-muted text-sm mb-8">📍 ${cfg.stationLocation || ''} | الفترة: ${formatDate(fromDate)} إلى ${formatDate(toDate)}</div>
+      
+      <div class="section-title">⛽ إجمالي الاستهلاك</div>
+      <div class="stats-grid mb-8">
+        <div class="stat-box diesel"><div class="stat-label">ديزل</div><div class="stat-value">${fmt(totals.diesel)}</div><div class="stat-sub">${fmt(totals.diesel*cfg.prices.diesel,2)} ر.س</div></div>
+        <div class="stat-box n91"><div class="stat-label">91</div><div class="stat-value">${fmt(totals.n91)}</div><div class="stat-sub">${fmt(totals.n91*cfg.prices.n91,2)} ر.س</div></div>
+        <div class="stat-box n95"><div class="stat-label">95</div><div class="stat-value">${fmt(totals.n95)}</div><div class="stat-sub">${fmt(totals.n95*cfg.prices.n95,2)} ر.س</div></div>
+      </div>
+      
+      <div class="totals-section">
+        <div class="totals-grid">
+          <div class="total-item"><div class="total-label">إجمالي المبلغ</div><div class="total-value">${fmt(totals.money,2)} ر.س</div></div>
+          <div class="total-item"><div class="total-label">عدد الورديات</div><div class="total-value">${filtered.length}</div></div>
+        </div>
+      </div>
+
+      <div class="section-title mt-12">💳 تقسيم المبالغ</div>
+      <div class="payment-grid">
+        <div class="payment-item"><div class="payment-label">شبكة</div><div class="payment-value">${fmt(totals.network,2)}</div></div>
+        <div class="payment-item"><div class="payment-label">فواتير</div><div class="payment-value">${fmt(totals.invoices,2)}</div></div>
+        <div class="payment-item"><div class="payment-label">تم توريده</div><div class="payment-value">${fmt(totals.supplied,2)}</div></div>
+      </div>
+
+      <div class="section-title mt-12">📈 متوسط الاستهلاك اليومي</div>
+      <div class="stats-grid">
+        <div class="stat-box diesel" style="padding:8px"><div class="stat-label">ديزل/يوم</div><div class="stat-value" style="font-size:14px">${fmt(avgD,0)}</div></div>
+        <div class="stat-box n91" style="padding:8px"><div class="stat-label">91/يوم</div><div class="stat-value" style="font-size:14px">${fmt(avg91,0)}</div></div>
+        <div class="stat-box n95" style="padding:8px"><div class="stat-label">95/يوم</div><div class="stat-value" style="font-size:14px">${fmt(avg95,0)}</div></div>
+      </div>
+
+      <div class="section-title mt-12">🛢️ المخزون المتبقي</div>
+      <div class="stats-grid">
+        <div class="stat-box diesel" style="padding:8px"><div class="stat-label">ديزل</div><div class="stat-value" style="font-size:14px">${fmt(stock.diesel)}</div></div>
+        <div class="stat-box n91" style="padding:8px"><div class="stat-label">91</div><div class="stat-value" style="font-size:14px">${fmt(stock.n91)}</div></div>
+        <div class="stat-box n95" style="padding:8px"><div class="stat-label">95</div><div class="stat-value" style="font-size:14px">${fmt(stock.n95)}</div></div>
+      </div>
+
+      <div class="section-title mt-12">🔢 آخر قراءات العدادات</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;">
+        ${lastMeters.map(m => `<div class="payment-item" style="padding:8px"><div class="payment-label">${m.name}</div><div class="payment-value" style="font-size:13px">${fmt(m.reading)}</div></div>`).join('')}
+      </div>
+
+      ${supplyInPeriod.length > 0 ? `
+      <div class="section-title mt-12">🚛 التوريدات (${supplyInPeriod.length} صهريج)</div>
+      ${supplyInPeriod.map(s => `<div style="background:var(--gray-100);border-radius:6px;padding:8px;margin-bottom:6px;font-size:12px">
+        <span class="badge badge-${s.type==='diesel'?'diesel':s.type==='91'?'91':'95'}">${s.type==='diesel'?'ديزل':s.type}</span>
+        <strong style="margin-right:6px">${fmt(s.qty)} لتر</strong> — ${formatDateShort(s.date)}
+        ${s.invoice ? `| فاتورة: ${s.invoice}` : ''}
+      </div>`).join('')}` : ''}
+    </div>
+  </div>`;
+
+  document.getElementById('reportOutput').innerHTML = html;
+}
+
+function getMonthStartDate() {
+  const now = new Date();
+  const day = now.getDate();
+  const ms = DB.config.monthStart || 1;
+  if (day >= ms) return new Date(now.getFullYear(), now.getMonth(), ms).toISOString().split('T')[0];
+  return new Date(now.getFullYear(), now.getMonth() - 1, ms).toISOString().split('T')[0];
+}
+
+function printReport() {
+  generateReport();
+  setTimeout(() => window.print(), 300);
+}
+
+// ===========================
+// SETTINGS PAGE
+// ===========================
+function renderSettingsPage() {
+  if (!DB.config) return;
+  document.getElementById('cfg_stationName').value = DB.config.stationName || '';
+  document.getElementById('cfg_stationLocation').value = DB.config.stationLocation || '';
+  document.getElementById('cfg_monthStart').value = DB.config.monthStart || 1;
+  document.getElementById('cfg_minStock').value = DB.config.minStock || 5000;
+  document.getElementById('cfg_dieselPrice').value = DB.config.prices.diesel;
+  document.getElementById('cfg_91Price').value = DB.config.prices.n91;
+  document.getElementById('cfg_95Price').value = DB.config.prices.n95;
+  renderUsersList();
+}
+
+function savePrices() {
+  DB.config.prices.diesel = parseFloat(document.getElementById('cfg_dieselPrice').value) || DB.config.prices.diesel;
+  DB.config.prices.n91 = parseFloat(document.getElementById('cfg_91Price').value) || DB.config.prices.n91;
+  DB.config.prices.n95 = parseFloat(document.getElementById('cfg_95Price').value) || DB.config.prices.n95;
+  saveDB();
+  alert('✅ تم حفظ الأسعار');
+}
+
+function saveStationInfo() {
+  DB.config.stationName = document.getElementById('cfg_stationName').value;
+  DB.config.stationLocation = document.getElementById('cfg_stationLocation').value;
+  DB.config.monthStart = parseInt(document.getElementById('cfg_monthStart').value) || 1;
+  DB.config.minStock = parseInt(document.getElementById('cfg_minStock').value) || 5000;
+  saveDB();
+  document.getElementById('headerStationName').textContent = DB.config.stationName;
+  document.getElementById('stationNameLogin').textContent = DB.config.stationName;
+  alert('✅ تم الحفظ');
+}
+
+function addUser() {
+  const email = document.getElementById('newUserEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('newUserPass').value;
+  const name = document.getElementById('newUserName').value.trim();
+  const role = document.getElementById('newUserRole').value;
+  if (!email || !pass || !name) { alert('يرجى ملء جميع الحقول'); return; }
+  if (DB.users.find(u => u.email === email)) { alert('البريد مسجل بالفعل'); return; }
+  DB.users.push({ email, pass, name, role });
+  saveDB();
+  renderUsersList();
+  document.getElementById('newUserEmail').value = '';
+  document.getElementById('newUserPass').value = '';
+  document.getElementById('newUserName').value = '';
+  alert('✅ تم إضافة المستخدم');
+}
+
+function renderUsersList() {
+  const html = DB.users.map((u, i) => `
+    <div class="flex-between" style="padding:8px;border-bottom:1px solid var(--gray-200)">
+      <div>
+        <div class="fw-bold text-sm">${u.name}</div>
+        <div class="text-muted" style="font-size:11px">${u.email} | ${u.role === 'owner' ? '👑 مالك' : u.role === 'supervisor' ? '🔍 مشرف' : '👤 موظف'}</div>
+      </div>
+      ${u.role !== 'owner' ? `<button class="btn btn-ghost btn-sm" onclick="removeUser(${i})" style="color:var(--red)">🗑️</button>` : ''}
+    </div>
+  `).join('');
+  document.getElementById('usersList').innerHTML = html || '<div class="text-muted text-sm">لا يوجد مستخدمون</div>';
+}
+
+function removeUser(i) {
+  if (!confirm('هل تريد حذف هذا المستخدم؟')) return;
+  DB.users.splice(i, 1);
+  saveDB();
+  renderUsersList();
+}
+
+function archiveMonth() {
+  const now = new Date();
+  const day = now.getDate();
+  const ms = DB.config.monthStart || 1;
+  if (day < ms + 1) { alert(`يمكن الأرشفة بعد يوم ${ms + 1} فقط`); return; }
+  const archived = {
+    date: new Date().toISOString(),
+    shifts: [...DB.shifts],
+    meters: [...DB.meters],
+    inventory: [...DB.inventory],
+    supply: [...DB.supply]
+  };
+  DB.archives.push(archived);
+  const lastMetersByPump = {};
+  DB.config.pumps.forEach(p => { lastMetersByPump[p.id] = getLastReading(p.id); });
+  DB.shifts = [];
+  DB.meters = [];
+  DB.inventory = [];
+  saveDB();
+  alert('✅ تم أرشفة الشهر السابق بنجاح');
+}
+
+// ===========================
+// NAVIGATION
+// ===========================
+function showPage(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (page === 'home') updateHomePage();
+  if (page === 'meters') renderMetersTable();
+  if (page === 'log') renderLog();
+  if (page === 'inventory') renderInventoryTable();
+  if (page === 'supply') renderSupplyLog();
+  if (page === 'instant') renderInstantPumps();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ===========================
+// HELPERS
+// ===========================
+function fmt(n, decimals = 0) {
+  if (isNaN(n) || n === null || n === undefined) return '0';
+  return parseFloat(n).toLocaleString('en', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  const date = new Date(d + 'T00:00:00');
+  const days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  return `${days[date.getDay()]} ${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`;
+}
+
+function formatDateShort(d) {
+  if (!d) return '—';
+  const date = new Date(d + 'T00:00:00');
+  return `${date.getDate()}/${date.getMonth()+1}`;
+}
+
+function enableCopyable() {
+  document.querySelectorAll('.copyable').forEach(el => {
+    el.addEventListener('click', function() {
+      const text = this.textContent.replace('نسخ', '').trim();
+      navigator.clipboard.writeText(text).catch(() => {});
+      const hint = this.querySelector('.copy-hint');
+      if (hint) { hint.textContent = '✅ تم النسخ'; setTimeout(() => hint.textContent = 'نسخ', 1500); }
+    });
+  });
+}
+
+// ===========================
+// BOOT
+// ===========================
+loadDB();
+
+if (!DB.config) {
+  // First time: show setup
+  document.getElementById('loginOverlay').classList.remove('open');
+  initSetupWizard();
+} else {
+  // Show login
+  document.getElementById('setupOverlay').classList.remove('open');
+  showLoginScreen();
+}
+
+// Update date in header every minute
+setInterval(() => {
+  const now = new Date();
+  document.getElementById('headerDate').textContent = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
+}, 60000);
+
+document.getElementById('todayDate').textContent = formatDate(new Date().toISOString().split('T')[0]);
+</script>
+</body>
+</html>
